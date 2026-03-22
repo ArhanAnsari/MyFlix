@@ -1,0 +1,15 @@
+{
+  "name": "myflix-process-video",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "node-appwrite": "^15.0.0"
+  }
+}
