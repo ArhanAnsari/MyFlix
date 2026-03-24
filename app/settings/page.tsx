@@ -17,13 +17,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadStats = async () => {
-      const res = await fetch("/api/settings/stats", { cache: "no-store" });
-      if (!res.ok) return;
+      try {
+        const res = await fetch("/api/settings/stats", { cache: "no-store" });
+        if (!res.ok) return;
 
-      const data = await res.json();
-      setTotalVideos(data.totalVideos ?? 0);
-      setTotalBytes(data.totalBytes ?? 0);
-      setLoading(false);
+        const data = await res.json();
+        setTotalVideos(data.totalVideos ?? 0);
+        setTotalBytes(data.totalBytes ?? 0);
+      } finally {
+        setLoading(false);
+      }
     };
 
     void loadStats();

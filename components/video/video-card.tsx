@@ -16,7 +16,7 @@ export function VideoCard({ video }: VideoCardProps) {
           {video.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={video.thumbnailUrl}
+              src={`/api/videos/${video.$id}/thumbnail`}
               alt={video.title}
               className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             />

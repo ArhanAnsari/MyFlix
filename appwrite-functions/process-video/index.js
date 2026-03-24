@@ -16,6 +16,7 @@ import {
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
+const projectId = process.env.APPWRITE_PROJECT_ID;
 const apiKey = process.env.APPWRITE_API_KEY;
 const databaseId = process.env.APPWRITE_DATABASE_ID;
 const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID;
@@ -57,6 +58,10 @@ const runFfmpeg = async (inputPath, hlsDir, thumbPath) => {
 
 const handler = async ({ req, res, log, error }) => {
   try {
+    if (!endpoint || !projectId || !apiKey || !databaseId || !videosCollectionId || !bucketId) {
+      return res.json({ error: "Missing required function environment variables" }, 500);
+    }
+
     const payload = JSON.parse(req.body || "{}");
     const { videoId, fileId, userId } = payload;
 

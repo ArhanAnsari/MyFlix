@@ -17,15 +17,20 @@ export default function VideoPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch(`/api/videos/${params.id}`, { cache: "no-store" });
-      if (!res.ok) {
-        router.replace("/dashboard");
-        return;
-      }
+      try {
+        const res = await fetch(`/api/videos/${params.id}`, { cache: "no-store" });
+        if (!res.ok) {
+          router.replace("/dashboard");
+          return;
+        }
 
-      const data = await res.json();
-      setVideo(data.video);
-      setLoading(false);
+        const data = await res.json();
+        setVideo(data.video);
+      } catch {
+        router.replace("/dashboard");
+      } finally {
+        setLoading(false);
+      }
     };
 
     void load();
@@ -34,12 +39,12 @@ export default function VideoPage() {
   const manifestUrl = useMemo(() => {
     if (!video?.hlsFileId) return "";
     return `/api/stream/${video.$id}/manifest`;
-  }, [video?.hlsFileId]);
+  }, [video?.hlsFileId, video?.$id]);
 
   const subtitleUrl = useMemo(() => {
     if (!video?.subtitleFileId) return "";
     return `/api/subtitles/${video.$id}`;
-  }, [video?.subtitleFileId]);
+  }, [video?.subtitleFileId, video?.$id]);
 
   const deleteVideo = async () => {
     const confirmed = window.confirm("Delete this video permanently?");
