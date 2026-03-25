@@ -1,4 +1,5 @@
 export const SESSION_COOKIE = "myflix_session";
+export const USER_ID_COOKIE = "myflix_user_id";
 
 export const MAX_VIDEO_SIZE_BYTES = 5 * 1024 * 1024 * 1024;
 export const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];

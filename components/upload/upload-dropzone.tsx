@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { storage } from "@/lib/appwrite-client";
+import { apiRequest } from "@/lib/client/api";
 import { ALLOWED_VIDEO_TYPES, MAX_VIDEO_SIZE_BYTES } from "@/lib/constants";
 
 type UploadDropzoneProps = {
@@ -124,7 +125,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
         subtitleFileId = subtitleUpload.$id;
       }
 
-      const metadataRes = await fetch("/api/videos", {
+      await apiRequest("/api/videos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -135,12 +136,8 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
           size: file.size,
           duration,
         }),
+        onUnauthorized: () => window.location.assign("/login"),
       });
-
-      if (!metadataRes.ok) {
-        const data = await metadataRes.json();
-        throw new Error(data.error ?? "Failed to save metadata");
-      }
 
       setProgress(100);
       setFile(null);
@@ -155,9 +152,9 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
   };
 
   return (
-    <Card className="border-zinc-800 bg-zinc-950/90">
+    <Card className="border-stone-300 bg-[linear-gradient(160deg,#fffdf8_0%,#f2e7d7_100%)]">
       <CardHeader>
-        <CardTitle>Upload video</CardTitle>
+        <CardTitle className="text-2xl">Upload video</CardTitle>
         <CardDescription>
           Drag and drop or select a file. Max size is 5GB. Supported: MP4, WebM, MOV.
         </CardDescription>
@@ -172,9 +169,9 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
             const dropped = e.dataTransfer.files?.[0] ?? null;
             setSelectedFile(dropped);
           }}
-          className="flex min-h-52 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/70 p-6 text-zinc-300 transition hover:border-cyan-500"
+          className="flex min-h-52 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-stone-400 bg-stone-100/80 p-6 text-slate-700 transition hover:border-orange-500 hover:bg-white"
         >
-          <UploadCloud className="h-8 w-8 text-cyan-400" />
+          <UploadCloud className="h-8 w-8 text-orange-600" />
           <p className="text-sm">{file ? file.name : "Drop video here or click to browse"}</p>
         </button>
         <input
@@ -186,21 +183,21 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
         />
 
         <div className="space-y-2">
-          <label htmlFor="title" className="text-sm text-zinc-300">
+          <label htmlFor="title" className="text-sm text-slate-700">
             Title
           </label>
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm text-zinc-300" htmlFor="subtitle">
+          <label className="text-sm text-slate-700" htmlFor="subtitle">
             Subtitle (.vtt, optional)
           </label>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={() => subtitleInputRef.current?.click()}>
               {subtitleFile ? "Change subtitle" : "Upload subtitle"}
             </Button>
-            <span className="text-sm text-zinc-400">{subtitleFile?.name ?? "No subtitle selected"}</span>
+            <span className="text-sm text-slate-600">{subtitleFile?.name ?? "No subtitle selected"}</span>
           </div>
           <input
             ref={subtitleInputRef}
@@ -213,7 +210,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="description" className="text-sm text-zinc-300">
+          <label htmlFor="description" className="text-sm text-slate-700">
             Description
           </label>
           <Textarea
@@ -225,7 +222,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
         </div>
 
         {uploading ? <Progress value={progress} /> : null}
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         <Button onClick={onUpload} disabled={!file || !title || uploading} className="w-full">
           {uploading ? (

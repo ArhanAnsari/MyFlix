@@ -3,15 +3,24 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases, getAdminStorage, getAdminUsers } from "@/lib/appwrite";
+import { handleApiError, requireEnv } from "@/lib/server/api";
 import { extractFileIdFromUrl, extractSegmentIdsFromManifest } from "@/lib/video-files";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID!;
-const historyCollectionId = process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID!;
-const bucketId = process.env.APPWRITE_STORAGE_BUCKET_ID!;
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    historyCollectionId: requireEnv(
+      "APPWRITE_WATCH_HISTORY_COLLECTION_ID",
+      process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID,
+    ),
+    bucketId: requireEnv("APPWRITE_STORAGE_BUCKET_ID", process.env.APPWRITE_STORAGE_BUCKET_ID),
+  };
+}
 
 export async function DELETE() {
   try {
+    const { databaseId, videosCollectionId, historyCollectionId, bucketId } = getConfig();
     const user = await requireUser();
     const databases = getAdminDatabases();
     const storage = getAdminStorage();
@@ -59,8 +68,6 @@ export async function DELETE() {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete account data";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to delete account data");
   }
 }

@@ -2,17 +2,23 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases, getAdminStorage } from "@/lib/appwrite";
+import { handleApiError, jsonForbidden, requireEnv } from "@/lib/server/api";
 import { extractSegmentIdsFromManifest } from "@/lib/video-files";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID!;
-const bucketId = process.env.APPWRITE_STORAGE_BUCKET_ID!;
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    bucketId: requireEnv("APPWRITE_STORAGE_BUCKET_ID", process.env.APPWRITE_STORAGE_BUCKET_ID),
+  };
+}
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ videoId: string; segmentId: string }> },
 ) {
   try {
+    const { databaseId, videosCollectionId, bucketId } = getConfig();
     const user = await requireUser();
     const { videoId, segmentId } = await context.params;
 
@@ -21,7 +27,7 @@ export async function GET(
 
     const video = await databases.getDocument(databaseId, videosCollectionId, videoId);
     if (video.userId !== user.$id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return jsonForbidden();
     }
 
     if (!video.hlsFileId) {
@@ -46,8 +52,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to stream segment";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Unable to stream segment");
   }
 }

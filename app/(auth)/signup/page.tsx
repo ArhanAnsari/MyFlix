@@ -8,7 +8,9 @@ export default async function SignupPage() {
   if (user) redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(6,182,212,0.2),transparent_60%),linear-gradient(180deg,#08090b_0%,#111217_100%)] px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="pointer-events-none absolute -left-24 bottom-0 h-80 w-80 rounded-full bg-amber-300/45 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-12 h-80 w-80 rounded-full bg-cyan-300/40 blur-3xl" />
       <AuthForm mode="signup" />
     </div>
   );

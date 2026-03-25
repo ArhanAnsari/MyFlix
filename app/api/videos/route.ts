@@ -4,18 +4,24 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases, getAdminFunctions } from "@/lib/appwrite";
 import { PAGE_SIZE } from "@/lib/constants";
+import { handleApiError, parsePositiveInt, requireEnv } from "@/lib/server/api";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID!;
-const functionId = process.env.APPWRITE_VIDEO_FUNCTION_ID;
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    functionId: process.env.APPWRITE_VIDEO_FUNCTION_ID,
+  };
+}
 
 export async function GET(request: Request) {
   try {
+    const { databaseId, videosCollectionId } = getConfig();
     const user = await requireUser();
     const { searchParams } = new URL(request.url);
 
-    const page = Number(searchParams.get("page") ?? "1");
-    const limit = Number(searchParams.get("limit") ?? PAGE_SIZE.toString());
+    const page = parsePositiveInt(searchParams.get("page"), 1, 1, 10000);
+    const limit = parsePositiveInt(searchParams.get("limit"), PAGE_SIZE, 1, 100);
     const search = searchParams.get("search")?.trim();
     const sort = searchParams.get("sort") === "asc" ? "asc" : "desc";
 
@@ -40,14 +46,13 @@ export async function GET(request: Request) {
       limit,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch videos";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to fetch videos");
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const { databaseId, videosCollectionId, functionId } = getConfig();
     const user = await requireUser();
     const body = (await request.json()) as {
       title?: string;
@@ -93,8 +98,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ video: document }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create video record";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to create video record");
   }
 }

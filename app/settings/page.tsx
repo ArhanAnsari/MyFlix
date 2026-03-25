@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiRequest } from "@/lib/client/api";
 import { formatBytes } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -18,10 +19,10 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const res = await fetch("/api/settings/stats", { cache: "no-store" });
-        if (!res.ok) return;
-
-        const data = await res.json();
+        const data = await apiRequest<{ totalVideos: number; totalBytes: number }>("/api/settings/stats", {
+          cache: "no-store",
+          onUnauthorized: () => router.replace("/login"),
+        });
         setTotalVideos(data.totalVideos ?? 0);
         setTotalBytes(data.totalBytes ?? 0);
       } finally {
@@ -30,7 +31,7 @@ export default function SettingsPage() {
     };
 
     void loadStats();
-  }, []);
+  }, [router]);
 
   const deleteAccountData = async () => {
     const confirmed = window.confirm("Delete all videos and account data? This action cannot be undone.");
@@ -38,10 +39,11 @@ export default function SettingsPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch("/api/settings/delete-account", { method: "DELETE" });
-      if (res.ok) {
-        router.replace("/signup");
-      }
+      await apiRequest("/api/settings/delete-account", {
+        method: "DELETE",
+        onUnauthorized: () => router.replace("/login"),
+      });
+      router.replace("/signup");
     } finally {
       setDeleting(false);
     }
@@ -50,12 +52,12 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <Card className="border-zinc-800 bg-zinc-950/90">
+        <Card className="border-stone-300 bg-[linear-gradient(160deg,#fffdf8_0%,#f3e8da_100%)]">
           <CardHeader>
             <CardTitle>Storage usage</CardTitle>
             <CardDescription>Overview of your private cloud consumption.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-zinc-300">
+          <CardContent className="space-y-2 text-sm text-slate-700">
             {loading ? (
               <p>Loading stats...</p>
             ) : (
@@ -67,7 +69,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-red-900/60 bg-red-950/20">
+        <Card className="border-red-300 bg-red-50/70">
           <CardHeader>
             <CardTitle>Danger zone</CardTitle>
             <CardDescription>Delete your full account and all associated content.</CardDescription>

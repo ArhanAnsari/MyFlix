@@ -7,6 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoPlayer } from "@/components/video/video-player";
+import { apiRequest } from "@/lib/client/api";
 import type { VideoDocument } from "@/lib/types";
 
 export default function VideoPage() {
@@ -18,13 +19,10 @@ export default function VideoPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`/api/videos/${params.id}`, { cache: "no-store" });
-        if (!res.ok) {
-          router.replace("/dashboard");
-          return;
-        }
-
-        const data = await res.json();
+        const data = await apiRequest<{ video: VideoDocument }>(`/api/videos/${params.id}`, {
+          cache: "no-store",
+          onUnauthorized: () => router.replace("/login"),
+        });
         setVideo(data.video);
       } catch {
         router.replace("/dashboard");
@@ -50,16 +48,21 @@ export default function VideoPage() {
     const confirmed = window.confirm("Delete this video permanently?");
     if (!confirmed) return;
 
-    const res = await fetch(`/api/videos/${params.id}`, { method: "DELETE" });
-    if (res.ok) {
+    try {
+      await apiRequest(`/api/videos/${params.id}`, {
+        method: "DELETE",
+        onUnauthorized: () => router.replace("/login"),
+      });
       router.replace("/dashboard");
+    } catch {
+      // Keep user on page when deletion fails.
     }
   };
 
   if (loading) {
     return (
       <AppShell>
-        <p className="text-sm text-zinc-400">Loading video...</p>
+        <p className="text-sm text-slate-600">Loading video...</p>
       </AppShell>
     );
   }
@@ -67,7 +70,7 @@ export default function VideoPage() {
   if (!video) {
     return (
       <AppShell>
-        <p className="text-sm text-zinc-400">Video not found.</p>
+        <p className="text-sm text-slate-600">Video not found.</p>
       </AppShell>
     );
   }
@@ -75,17 +78,17 @@ export default function VideoPage() {
   return (
     <AppShell>
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <Card className="border-zinc-800 bg-zinc-950/80">
+        <Card className="border-stone-300 bg-[linear-gradient(150deg,#fffdf8_0%,#f0e5d6_100%)]">
           <CardContent className="space-y-4 p-4 sm:p-6">
             {manifestUrl ? (
               <VideoPlayer videoId={video.$id} manifestUrl={manifestUrl} subtitleUrl={subtitleUrl} />
             ) : (
-              <p className="text-sm text-zinc-400">Video processing in progress. Refresh in a moment.</p>
+              <p className="text-sm text-slate-600">Video processing in progress. Refresh in a moment.</p>
             )}
 
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-zinc-100">{video.title}</h1>
-              <p className="text-sm text-zinc-400">{video.description || "No description"}</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{video.title}</h1>
+              <p className="text-sm text-slate-600">{video.description || "No description"}</p>
             </div>
 
             <Button variant="danger" onClick={deleteVideo}>

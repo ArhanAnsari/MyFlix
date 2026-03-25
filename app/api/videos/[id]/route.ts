@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases, getAdminStorage } from "@/lib/appwrite";
+import { handleApiError, jsonForbidden, requireEnv } from "@/lib/server/api";
 import { extractFileIdFromUrl, extractSegmentIdsFromManifest } from "@/lib/video-files";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID!;
-const watchHistoryCollectionId = process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID!;
-const bucketId = process.env.APPWRITE_STORAGE_BUCKET_ID!;
-
-function forbidden() {
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    watchHistoryCollectionId: requireEnv(
+      "APPWRITE_WATCH_HISTORY_COLLECTION_ID",
+      process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID,
+    ),
+    bucketId: requireEnv("APPWRITE_STORAGE_BUCKET_ID", process.env.APPWRITE_STORAGE_BUCKET_ID),
+  };
 }
 
 export async function GET(
@@ -18,18 +22,17 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { databaseId, videosCollectionId } = getConfig();
     const user = await requireUser();
     const { id } = await context.params;
     const databases = getAdminDatabases();
 
     const video = await databases.getDocument(databaseId, videosCollectionId, id);
-    if (video.userId !== user.$id) return forbidden();
+    if (video.userId !== user.$id) return jsonForbidden();
 
     return NextResponse.json({ video });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch video";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to fetch video");
   }
 }
 
@@ -38,13 +41,14 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { databaseId, videosCollectionId, watchHistoryCollectionId, bucketId } = getConfig();
     const user = await requireUser();
     const { id } = await context.params;
     const databases = getAdminDatabases();
     const storage = getAdminStorage();
 
     const video = await databases.getDocument(databaseId, videosCollectionId, id);
-    if (video.userId !== user.$id) return forbidden();
+    if (video.userId !== user.$id) return jsonForbidden();
 
     const fileIds = [video.originalFileId, video.hlsFileId, video.subtitleFileId].filter(Boolean) as string[];
 
@@ -71,8 +75,6 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete video";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to delete video");
   }
 }

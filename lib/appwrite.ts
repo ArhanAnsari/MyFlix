@@ -10,6 +10,9 @@ import {
 const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 const apiKey = process.env.APPWRITE_API_KEY;
+const allowSelfSigned =
+  process.env.APPWRITE_SELF_SIGNED === "1" ||
+  process.env.APPWRITE_SELF_SIGNED === "true";
 
 function assertEnv() {
   if (!endpoint || !projectId) {
@@ -17,16 +20,26 @@ function assertEnv() {
   }
 }
 
+function createBaseClient() {
+  const client = new Client().setEndpoint(endpoint!).setProject(projectId!);
+
+  if (allowSelfSigned) {
+    client.setSelfSigned(true);
+  }
+
+  return client;
+}
+
 export function createPublicClient() {
   assertEnv();
 
-  return new Client().setEndpoint(endpoint!).setProject(projectId!);
+  return createBaseClient();
 }
 
 export function createSessionClient(sessionSecret: string) {
   assertEnv();
 
-  const client = new Client().setEndpoint(endpoint!).setProject(projectId!);
+  const client = createBaseClient();
   client.setSession(sessionSecret);
 
   return client;
@@ -39,7 +52,7 @@ export function createAdminClient() {
     throw new Error("Missing APPWRITE_API_KEY");
   }
 
-  return new Client().setEndpoint(endpoint!).setProject(projectId!).setKey(apiKey);
+  return createBaseClient().setKey(apiKey);
 }
 
 export function getPublicAccount() {
@@ -47,7 +60,12 @@ export function getPublicAccount() {
 }
 
 export function getSessionAccount(sessionSecret: string) {
-  return new Account(createSessionClient(sessionSecret));
+  console.log('[APPWRITE] getSessionAccount called with sessionSecret length:', sessionSecret?.length);
+  
+  const client = createSessionClient(sessionSecret);
+  console.log('[APPWRITE] Created session client');
+  
+  return new Account(client);
 }
 
 export function getAdminDatabases() {

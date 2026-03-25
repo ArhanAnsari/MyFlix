@@ -3,6 +3,7 @@
 import Hls from "hls.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { apiRequest } from "@/lib/client/api";
 import { WATCH_HISTORY_INTERVAL_MS } from "@/lib/constants";
 
 type VideoPlayerProps = {
@@ -59,10 +60,9 @@ export function VideoPlayer({ videoId, manifestUrl, subtitleUrl }: VideoPlayerPr
     if (!video || !ready) return;
 
     const loadProgress = async () => {
-      const res = await fetch(`/api/watch-history/${videoId}`, { cache: "no-store" });
-      if (!res.ok) return;
-
-      const data = await res.json();
+      const data = await apiRequest<{ progress: number }>(`/api/watch-history/${videoId}`, {
+        cache: "no-store",
+      });
       if (typeof data.progress === "number" && data.progress > 0) {
         video.currentTime = data.progress;
       }
@@ -78,7 +78,7 @@ export function VideoPlayer({ videoId, manifestUrl, subtitleUrl }: VideoPlayerPr
     const interval = setInterval(() => {
       if (video.paused || video.ended) return;
 
-      void fetch(`/api/watch-history/${videoId}`, {
+      void apiRequest(`/api/watch-history/${videoId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ progress: Math.floor(video.currentTime) }),
@@ -94,13 +94,13 @@ export function VideoPlayer({ videoId, manifestUrl, subtitleUrl }: VideoPlayerPr
         ref={videoRef}
         controls
         playsInline
-        className="aspect-video w-full rounded-xl border border-zinc-800 bg-black"
+        className="aspect-video w-full rounded-2xl border border-stone-300 bg-black shadow-[0_24px_30px_-20px_rgba(15,23,42,0.7)]"
       >
         {subtitleUrl ? (
           <track kind="subtitles" src={subtitleUrl} srcLang="en" label="English" default />
         ) : null}
       </video>
-      {!ready ? <p className="text-sm text-zinc-400">Loading stream...</p> : null}
+      {!ready ? <p className="text-sm text-slate-600">Loading stream...</p> : null}
     </div>
   );
 }

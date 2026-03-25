@@ -3,15 +3,24 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases } from "@/lib/appwrite";
+import { handleApiError, requireEnv } from "@/lib/server/api";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const historyCollectionId = process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID!;
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    historyCollectionId: requireEnv(
+      "APPWRITE_WATCH_HISTORY_COLLECTION_ID",
+      process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID,
+    ),
+  };
+}
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ videoId: string }> },
 ) {
   try {
+    const { databaseId, historyCollectionId } = getConfig();
     const user = await requireUser();
     const { videoId } = await context.params;
     const databases = getAdminDatabases();
@@ -27,9 +36,7 @@ export async function GET(
       updatedAt: docs.documents[0]?.updatedAt ?? null,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch history";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to fetch history");
   }
 }
 
@@ -38,6 +45,7 @@ export async function PUT(
   context: { params: Promise<{ videoId: string }> },
 ) {
   try {
+    const { databaseId, historyCollectionId } = getConfig();
     const user = await requireUser();
     const { videoId } = await context.params;
     const body = (await request.json()) as { progress?: number };
@@ -71,8 +79,6 @@ export async function PUT(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update history";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to update history");
   }
 }

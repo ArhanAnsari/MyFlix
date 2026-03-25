@@ -3,13 +3,22 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases } from "@/lib/appwrite";
+import { handleApiError, requireEnv } from "@/lib/server/api";
 
-const databaseId = process.env.APPWRITE_DATABASE_ID!;
-const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID!;
-const historyCollectionId = process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID!;
+function getConfig() {
+  return {
+    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
+    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    historyCollectionId: requireEnv(
+      "APPWRITE_WATCH_HISTORY_COLLECTION_ID",
+      process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID,
+    ),
+  };
+}
 
 export async function GET() {
   try {
+    const { databaseId, videosCollectionId, historyCollectionId } = getConfig();
     const user = await requireUser();
     const databases = getAdminDatabases();
 
@@ -58,8 +67,6 @@ export async function GET() {
 
     return NextResponse.json({ items });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch watch history";
-    const status = message === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return handleApiError(error, "Failed to fetch watch history");
   }
 }

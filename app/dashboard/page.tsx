@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { VideoCard } from "@/components/video/video-card";
 import { PAGE_SIZE } from "@/lib/constants";
+import { apiRequest } from "@/lib/client/api";
 import type { VideoDocument } from "@/lib/types";
 
 type ContinueWatchingItem = {
@@ -42,20 +43,16 @@ export default function DashboardPage() {
       if (search.trim()) params.set("search", search.trim());
 
       try {
-        const res = await fetch(`/api/videos?${params.toString()}`, {
+        const data = await apiRequest<{ videos: VideoDocument[]; total: number }>(`/api/videos?${params.toString()}`, {
           signal: controller.signal,
           cache: "no-store",
+          onUnauthorized: () => window.location.assign("/login"),
         });
-
-        if (!res.ok) {
-          setVideos([]);
-          setTotal(0);
-          return;
-        }
-
-        const data = await res.json();
         setVideos(data.videos ?? []);
         setTotal(data.total ?? 0);
+      } catch {
+        setVideos([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
@@ -69,13 +66,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadContinueWatching = async () => {
       try {
-        const res = await fetch("/api/watch-history", { cache: "no-store" });
-        if (!res.ok) {
-          setContinueWatching([]);
-          return;
-        }
-
-        const data = await res.json();
+        const data = await apiRequest<{ items: ContinueWatchingItem[] }>("/api/watch-history", {
+          cache: "no-store",
+          onUnauthorized: () => window.location.assign("/login"),
+        });
         setContinueWatching(data.items ?? []);
       } catch {
         setContinueWatching([]);
@@ -89,8 +83,8 @@ export default function DashboardPage() {
     <AppShell>
       <section className="space-y-5">
         {continueWatching.length > 0 ? (
-          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
-            <h2 className="text-base font-semibold text-zinc-100">Continue Watching</h2>
+          <div className="space-y-3 rounded-2xl border border-stone-300 bg-white/80 p-4 shadow-[0_24px_40px_-36px_rgba(15,23,42,0.8)]">
+            <h2 className="text-base font-semibold text-slate-900">Continue Watching</h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {continueWatching.map((item) => {
                 const duration = item.video.duration > 0 ? item.video.duration : 1;
@@ -100,11 +94,11 @@ export default function DashboardPage() {
                   <Link
                     key={item.video.$id}
                     href={`/video/${item.video.$id}`}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3 transition hover:border-cyan-500/60"
+                    className="rounded-xl border border-stone-300 bg-stone-50/90 p-3 transition hover:-translate-y-0.5 hover:border-orange-500/50"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="line-clamp-1 text-sm font-medium text-zinc-100">{item.video.title}</p>
-                      <span className="text-xs text-zinc-400">{progressPercent}%</span>
+                      <p className="line-clamp-1 text-sm font-medium text-slate-900">{item.video.title}</p>
+                      <span className="text-xs text-slate-500">{progressPercent}%</span>
                     </div>
                     <Progress value={progressPercent} />
                   </Link>
@@ -114,9 +108,9 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-stone-300 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <Input
               value={search}
               onChange={(e) => {
@@ -139,9 +133,9 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-zinc-400">Loading videos...</p>
+          <p className="text-sm text-slate-600">Loading videos...</p>
         ) : videos.length === 0 ? (
-          <p className="text-sm text-zinc-400">No videos found. Upload your first one.</p>
+          <p className="text-sm text-slate-600">No videos found. Upload your first one.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {videos.map((video) => (
@@ -150,8 +144,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-          <p className="text-sm text-zinc-400">
+        <div className="flex items-center justify-between rounded-2xl border border-stone-300 bg-white/80 px-4 py-3">
+          <p className="text-sm text-slate-600">
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-2">

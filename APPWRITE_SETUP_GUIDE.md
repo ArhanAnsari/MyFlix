@@ -21,7 +21,10 @@ Set these in `.env.local`:
 ```bash
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id
+APPWRITE_SELF_SIGNED=false
 ```
+
+Set `APPWRITE_SELF_SIGNED=true` only when using self-hosted Appwrite over HTTPS with a self-signed certificate in local/dev environments.
 
 ## 3. Configure Authentication
 

@@ -8,7 +8,9 @@ export default async function LoginPage() {
   if (user) redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(6,182,212,0.2),transparent_60%),linear-gradient(180deg,#08090b_0%,#111217_100%)] px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-8 h-72 w-72 rounded-full bg-sky-300/40 blur-3xl" />
       <AuthForm mode="login" />
     </div>
   );
