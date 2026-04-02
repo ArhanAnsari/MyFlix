@@ -1,310 +1,353 @@
 {
-  "projectId": "69c103cb001e20b2fb18",
-  "projectName": "myflix",
-  "endpoint": "https://fra.cloud.appwrite.io/v1",
-  "settings": {
-    "services": {
-      "account": true,
-      "avatars": true,
-      "databases": true,
-      "locale": true,
-      "health": true,
-      "storage": true,
-      "teams": true,
-      "users": true,
-      "sites": true,
-      "functions": true,
-      "graphql": true,
-      "messaging": true
+    "projectId": "69c103cb001e20b2fb18",
+    "projectName": "myflix",
+    "endpoint": "https://fra.cloud.appwrite.io/v1",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
     },
-    "auth": {
-      "methods": {
-        "jwt": true,
-        "phone": true,
-        "invites": true,
-        "anonymous": true,
-        "email-otp": true,
-        "magic-url": true,
-        "email-password": true
-      },
-      "security": {
-        "duration": 31536000,
-        "limit": 0,
-        "sessionsLimit": 10,
-        "passwordHistory": 0,
-        "passwordDictionary": false,
-        "personalDataCheck": false,
-        "sessionAlerts": false,
-        "mockNumbers": []
-      }
-    }
-  },
-  "functions": [
-    {
-      "$id": "69c2706c00354ac252ac",
-      "name": "process-video",
-      "runtime": "node-25",
-      "path": "functions/process-video",
-      "entrypoint": "src/main.js",
-      "execute": ["any"],
-      "enabled": true,
-      "logging": true,
-      "events": [],
-      "schedule": "",
-      "timeout": 15,
-      "commands": "npm install",
-      "scopes": ["users.read"]
-    }
-  ],
-  "tablesDB": [
-    {
-      "$id": "myflix_db",
-      "name": "myflix_db",
-      "enabled": true
-    }
-  ],
-  "tables": [
-    {
-      "$id": "videos",
-      "$permissions": [
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")",
-        "create(\"guests\")",
-        "read(\"guests\")",
-        "update(\"guests\")",
-        "delete(\"guests\")"
-      ],
-      "databaseId": "myflix_db",
-      "name": "videos",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    "functions": [
         {
-          "key": "userId",
-          "type": "varchar",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "title",
-          "type": "varchar",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "description",
-          "type": "text",
-          "required": false,
-          "array": false,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "originalFileId",
-          "type": "varchar",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "hlsFileId",
-          "type": "varchar",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "subtitleFileId",
-          "type": "varchar",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "thumbnailUrl",
-          "type": "varchar",
-          "required": false,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "duration",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "default": null,
-          "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
-          "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-        },
-        {
-          "key": "size",
-          "type": "double",
-          "required": false,
-          "array": false,
-          "default": null,
-          "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
-          "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-        },
-        {
-          "key": "createdAt",
-          "type": "datetime",
-          "required": false,
-          "array": false,
-          "default": null,
-          "encrypt": false
+            "$id": "69c2706c00354ac252ac",
+            "name": "process-video",
+            "runtime": "node-25",
+            "path": "functions/process-video",
+            "entrypoint": "src/main.js",
+            "execute": [
+                "any"
+            ],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "commands": "npm install",
+            "scopes": [
+                "users.read"
+            ]
         }
-      ],
-      "indexes": [
+    ],
+    "tablesDB": [
         {
-          "$id": "120115_1_videos_user_id",
-          "$createdAt": "2026-03-24T09:40:54.546+00:00",
-          "$updatedAt": "2026-03-24T09:40:54.753+00:00",
-          "key": "videos_user_id",
-          "type": "key",
-          "status": "available",
-          "error": "",
-          "columns": ["userId"],
-          "lengths": [0],
-          "orders": ["asc"]
-        },
-        {
-          "$id": "120115_1_videos_created_at",
-          "$createdAt": "2026-03-24T09:41:09.512+00:00",
-          "$updatedAt": "2026-03-24T09:41:09.714+00:00",
-          "key": "videos_created_at",
-          "type": "key",
-          "status": "available",
-          "error": "",
-          "columns": ["$createdAt"],
-          "lengths": [0],
-          "orders": ["desc"]
-        },
-        {
-          "$id": "120115_1_videos_title_search",
-          "$createdAt": "2026-03-24T09:41:24.561+00:00",
-          "$updatedAt": "2026-03-24T09:41:25.396+00:00",
-          "key": "videos_title_search",
-          "type": "fulltext",
-          "status": "available",
-          "error": "",
-          "columns": ["title"],
-          "lengths": [0],
-          "orders": ["asc"]
+            "$id": "myflix_db",
+            "name": "myflix_db",
+            "enabled": true
         }
-      ]
-    },
-    {
-      "$id": "watch_history",
-      "$permissions": [
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")",
-        "create(\"guests\")",
-        "read(\"guests\")",
-        "update(\"guests\")",
-        "delete(\"guests\")"
-      ],
-      "databaseId": "myflix_db",
-      "name": "watch_history",
-      "enabled": true,
-      "rowSecurity": false,
-      "columns": [
+    ],
+    "tables": [
         {
-          "key": "userId",
-          "type": "varchar",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
+            "$id": "videos",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"guests\")",
+                "read(\"guests\")",
+                "update(\"guests\")",
+                "delete(\"guests\")"
+            ],
+            "databaseId": "myflix_db",
+            "name": "videos",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "originalFileId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "hlsFileId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "subtitleFileId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "thumbnailUrl",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "duration",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                    "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                },
+                {
+                    "key": "size",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                    "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "processingStatus",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "pending",
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "$id": "120115_1_videos_user_id",
+                    "$createdAt": "2026-03-24T09:40:54.546+00:00",
+                    "$updatedAt": "2026-03-24T09:40:54.753+00:00",
+                    "key": "videos_user_id",
+                    "type": "key",
+                    "status": "available",
+                    "error": "",
+                    "columns": [
+                        "userId"
+                    ],
+                    "lengths": [
+                        0
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "$id": "120115_1_videos_created_at",
+                    "$createdAt": "2026-03-24T09:41:09.512+00:00",
+                    "$updatedAt": "2026-03-24T09:41:09.714+00:00",
+                    "key": "videos_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "error": "",
+                    "columns": [
+                        "$createdAt"
+                    ],
+                    "lengths": [
+                        0
+                    ],
+                    "orders": [
+                        "desc"
+                    ]
+                },
+                {
+                    "$id": "120115_1_videos_title_search",
+                    "$createdAt": "2026-03-24T09:41:24.561+00:00",
+                    "$updatedAt": "2026-03-24T09:41:25.396+00:00",
+                    "key": "videos_title_search",
+                    "type": "fulltext",
+                    "status": "available",
+                    "error": "",
+                    "columns": [
+                        "title"
+                    ],
+                    "lengths": [
+                        0
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
-          "key": "videoId",
-          "type": "varchar",
-          "required": true,
-          "array": false,
-          "size": 255,
-          "default": null,
-          "encrypt": false
-        },
-        {
-          "key": "progress",
-          "type": "double",
-          "required": true,
-          "array": false,
-          "default": null,
-          "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
-          "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            "$id": "watch_history",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"guests\")",
+                "read(\"guests\")",
+                "update(\"guests\")",
+                "delete(\"guests\")"
+            ],
+            "databaseId": "myflix_db",
+            "name": "watch_history",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "videoId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "progress",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                    "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                }
+            ],
+            "indexes": [
+                {
+                    "$id": "120115_2_history_user_id",
+                    "$createdAt": "2026-03-25T09:39:48.950+00:00",
+                    "$updatedAt": "2026-03-25T09:39:49.078+00:00",
+                    "key": "history_user_id",
+                    "type": "key",
+                    "status": "available",
+                    "error": "",
+                    "columns": [
+                        "userId"
+                    ],
+                    "lengths": [
+                        0
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "$id": "120115_2_history_video_id",
+                    "$createdAt": "2026-03-25T09:40:02.227+00:00",
+                    "$updatedAt": "2026-03-25T09:40:02.388+00:00",
+                    "key": "history_video_id",
+                    "type": "key",
+                    "status": "available",
+                    "error": "",
+                    "columns": [
+                        "videoId"
+                    ],
+                    "lengths": [
+                        0
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         }
-      ],
-      "indexes": [
+    ],
+    "buckets": [
         {
-          "$id": "120115_2_history_user_id",
-          "$createdAt": "2026-03-25T09:39:48.950+00:00",
-          "$updatedAt": "2026-03-25T09:39:49.078+00:00",
-          "key": "history_user_id",
-          "type": "key",
-          "status": "available",
-          "error": "",
-          "columns": ["userId"],
-          "lengths": [0],
-          "orders": ["asc"]
-        },
-        {
-          "$id": "120115_2_history_video_id",
-          "$createdAt": "2026-03-25T09:40:02.227+00:00",
-          "$updatedAt": "2026-03-25T09:40:02.388+00:00",
-          "key": "history_video_id",
-          "type": "key",
-          "status": "available",
-          "error": "",
-          "columns": ["videoId"],
-          "lengths": [0],
-          "orders": ["asc"]
+            "$id": "videos_bucket",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"guests\")",
+                "read(\"guests\")",
+                "update(\"guests\")",
+                "delete(\"guests\")"
+            ],
+            "fileSecurity": true,
+            "name": "videos_bucket",
+            "enabled": true,
+            "maximumFileSize": 5000000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
         }
-      ]
-    }
-  ],
-  "buckets": [
-    {
-      "$id": "videos_bucket",
-      "$permissions": [
-        "create(\"users\")",
-        "read(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")",
-        "create(\"guests\")",
-        "read(\"guests\")",
-        "update(\"guests\")",
-        "delete(\"guests\")"
-      ],
-      "fileSecurity": true,
-      "name": "videos_bucket",
-      "enabled": true,
-      "maximumFileSize": 5000000000,
-      "allowedFileExtensions": [],
-      "compression": "none",
-      "encryption": true,
-      "antivirus": true
-    }
-  ],
-  "teams": [],
-  "topics": []
+    ],
+    "teams": [],
+    "topics": []
 }

@@ -1,4 +1,32 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { Client, Databases, IndexType, Permission, Role, Storage } from "node-appwrite";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load .env.local
+const envPath = path.join(__dirname, "../.env.local");
+console.log("Loading env from:", envPath);
+try {
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, "utf8");
+    console.log("Found .env.local, loading variables...");
+    envContent.split("\n").forEach((line) => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim().replace(/^"(.*)"$/, "$1");
+        process.env[key] = value;
+        console.log(`Set ${key}=${value.substring(0, 20)}...`);
+      }
+    });
+  } else {
+    console.log(".env.local not found at", envPath);
+  }
+} catch (err) {
+  console.error("Error loading .env.local:", err);
+}
 
 const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
@@ -8,6 +36,15 @@ const databaseId = process.env.APPWRITE_DATABASE_ID;
 const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID;
 const historyCollectionId = process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID;
 const bucketId = process.env.APPWRITE_STORAGE_BUCKET_ID;
+
+console.log("Checking env vars...");
+console.log("endpoint:", endpoint);
+console.log("projectId:", projectId);
+console.log("apiKey:", apiKey ? "SET" : "NOT SET");
+console.log("databaseId:", databaseId);
+console.log("videosCollectionId:", videosCollectionId);
+console.log("historyCollectionId:", historyCollectionId);
+console.log("bucketId:", bucketId);
 
 if (!endpoint || !projectId || !apiKey || !databaseId || !videosCollectionId || !historyCollectionId || !bucketId) {
   throw new Error("Missing required Appwrite environment variables");
@@ -57,6 +94,7 @@ async function ensureVideosCollection(databases) {
   await databases.createStringAttribute(databaseId, videosCollectionId, "hlsFileId", 64, false, "");
   await databases.createStringAttribute(databaseId, videosCollectionId, "subtitleFileId", 64, false, "");
   await databases.createStringAttribute(databaseId, videosCollectionId, "thumbnailUrl", 1000, false, "");
+  await databases.createStringAttribute(databaseId, videosCollectionId, "processingStatus", 20, false, "pending");
   await databases.createFloatAttribute(databaseId, videosCollectionId, "duration", true);
   await databases.createFloatAttribute(databaseId, videosCollectionId, "size", true);
   await databases.createDatetimeAttribute(databaseId, videosCollectionId, "createdAt", true);

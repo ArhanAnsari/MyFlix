@@ -3,6 +3,7 @@ import ffmpeg from "fluent-ffmpeg";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { createReadStream } from "node:fs";
 import {
   Client,
   Databases,
@@ -10,7 +11,6 @@ import {
   ID,
   Permission,
   Role,
-  InputFile,
 } from "node-appwrite";
 
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -95,10 +95,12 @@ const handler = async ({ req, res, log, error }) => {
     const segmentIdByName = new Map();
 
     for (const filename of files.filter((file) => file.endsWith(".ts"))) {
+      const filePath = path.join(hlsDir, filename);
+      const fileStream = createReadStream(filePath);
       const uploaded = await storage.createFile(
         bucketId,
         ID.unique(),
-        InputFile.fromPath(path.join(hlsDir, filename), filename),
+        fileStream,
         permissions,
       );
       segmentIdByName.set(filename, uploaded.$id);
@@ -118,17 +120,19 @@ const handler = async ({ req, res, log, error }) => {
 
     await fs.writeFile(playlistPath, playlistRewritten, "utf8");
 
+    const manifestStream = createReadStream(playlistPath);
     const manifestFile = await storage.createFile(
       bucketId,
       ID.unique(),
-      InputFile.fromPath(playlistPath, "master.m3u8"),
+      manifestStream,
       permissions,
     );
 
+    const thumbnailStream = createReadStream(thumbPath);
     const thumbnailFile = await storage.createFile(
       bucketId,
       ID.unique(),
-      InputFile.fromPath(thumbPath, "thumbnail.jpg"),
+      thumbnailStream,
       permissions,
     );
 
@@ -137,12 +141,23 @@ const handler = async ({ req, res, log, error }) => {
     await databases.updateDocument(databaseId, videosCollectionId, videoId, {
       hlsFileId: manifestFile.$id,
       thumbnailUrl,
+      processingStatus: "completed",
     });
 
     log(`Processed video ${videoId}`);
     return res.json({ ok: true });
   } catch (err) {
     error(err?.message || String(err));
+    try {
+      const { videoId } = JSON.parse(req.body || "{}");
+      if (videoId) {
+        const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
+        const databases = new Databases(client);
+        await databases.updateDocument(databaseId, videosCollectionId, videoId, {
+          processingStatus: "failed",
+        });
+      }
+    } catch {}
     return res.json({ error: err?.message || "Processing failed" }, 500);
   }
 };

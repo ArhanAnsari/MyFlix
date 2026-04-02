@@ -10,6 +10,7 @@ export type VideoDocument = {
   duration: number;
   size: number;
   createdAt: string;
+  processingStatus?: "pending" | "processing" | "completed" | "failed";
 };
 
 export type WatchHistoryDocument = {

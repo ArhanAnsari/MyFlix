@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         thumbnailUrl: "",
         duration: body.duration ?? 0,
         size: body.size,
+        processingStatus: functionId ? "processing" : "completed",
       },
       [
         Permission.read(Role.user(user.$id)),

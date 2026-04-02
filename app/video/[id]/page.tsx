@@ -7,6 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoPlayer } from "@/components/video/video-player";
+import { VideoActions } from "@/components/video/video-actions";
 import { apiRequest } from "@/lib/client/api";
 import type { VideoDocument } from "@/lib/types";
 
@@ -78,24 +79,32 @@ export default function VideoPage() {
   return (
     <AppShell>
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-        <Card className="border-stone-300 bg-[linear-gradient(150deg,#fffdf8_0%,#f0e5d6_100%)]">
+        <Card className="border-stone-300/60 dark:border-slate-700/60 bg-linear-to-br from-stone-50/95 to-stone-100/95 dark:from-slate-800/80 dark:to-slate-900/80">
           <CardContent className="space-y-4 p-4 sm:p-6">
             {manifestUrl ? (
               <VideoPlayer videoId={video.$id} manifestUrl={manifestUrl} subtitleUrl={subtitleUrl} />
             ) : (
-              <p className="text-sm text-slate-600">Video processing in progress. Refresh in a moment.</p>
+              <div className="flex items-center justify-center rounded-lg bg-slate-200/50 p-8 dark:bg-slate-700/30">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Video processing in progress. Please wait...</p>
+              </div>
             )}
 
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{video.title}</h1>
-              <p className="text-sm text-slate-600">{video.description || "No description"}</p>
+              <h1 className="text-3xl font-semibold tracking-tight">{video.title}</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{video.description || "No description"}</p>
             </div>
 
-            <Button variant="danger" onClick={deleteVideo}>
+            <Button 
+              variant="danger" 
+              onClick={deleteVideo}
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500"
+            >
               Delete video
             </Button>
           </CardContent>
         </Card>
+
+        <VideoActions video={video} onVideoUpdate={setVideo} />
       </div>
     </AppShell>
   );

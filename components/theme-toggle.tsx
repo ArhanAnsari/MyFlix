@@ -11,8 +11,8 @@ export function ThemeToggle() {
     <Button
       onClick={toggleTheme}
       variant="outline"
-      size="icon"
-      className="h-9 w-9 rounded-lg border border-stone-300 bg-transparent hover:bg-stone-200/50 dark:border-slate-600 dark:hover:bg-slate-600/50"
+      size="sm"
+      className="h-9 w-9 p-1 rounded-lg border border-stone-300 bg-transparent hover:bg-stone-200/50 dark:border-slate-600 dark:hover:bg-slate-600/50"
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
       {theme === "light" ? (
