@@ -29,8 +29,8 @@ const runFfmpeg = async (inputPath, hlsDir, thumbPath) => {
       .outputOptions([
         "-vf scale='min(1280,iw)':-2",
         "-c:v libx264",
-        "-preset veryfast",
-        "-crf 23",
+        "-preset ultrafast",
+        "-crf 28",
         "-c:a aac",
         "-b:a 128k",
         "-hls_time 6",
@@ -179,8 +179,11 @@ const processVideoAsync = async (videoId, fileId, userId, { log, error }) => {
     
     const segmentIdByName = new Map();
 
-    log("Uploading MPEG-TS segments...");
-    for (const filename of files.filter((file) => file.endsWith(".ts"))) {
+    log("Uploading MPEG-TS segments (concurrent)...");
+    const segmentFiles = files.filter((file) => file.endsWith(".ts"));
+    log(`  Total segments to upload: ${segmentFiles.length}`);
+    
+    const uploadPromises = segmentFiles.map(async (filename) => {
       log(`  Uploading segment: ${filename}`);
       const filePath = path.join(hlsDir, filename);
       const fileStream = createReadStream(filePath);
@@ -191,9 +194,15 @@ const processVideoAsync = async (videoId, fileId, userId, { log, error }) => {
         permissions,
       );
       log(`  Segment uploaded: ${filename} -> ${uploaded.$id}`);
-      segmentIdByName.set(filename, uploaded.$id);
-    }
-    log(`${segmentIdByName.size} segments uploaded`);
+      return { filename, segmentId: uploaded.$id };
+    });
+    
+    const uploadedSegments = await Promise.all(uploadPromises);
+    uploadedSegments.forEach(({ filename, segmentId }) => {
+      segmentIdByName.set(filename, segmentId);
+    });
+    
+    log(`${segmentIdByName.size} segments uploaded concurrently`);
 
     log("Rewriting HLS manifest...");
     const playlistPath = path.join(hlsDir, "master.m3u8");

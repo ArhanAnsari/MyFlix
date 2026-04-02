@@ -29,7 +29,7 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="page-ambient min-h-full flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
+      <body className="page-ambient min-h-full flex flex-col text-slate-900 dark:text-slate-100 transition-colors" suppressHydrationWarning>
         <AppWrapper>
           <div className="relative z-10 flex min-h-full flex-col">{children}</div>
         </AppWrapper>
