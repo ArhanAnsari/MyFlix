@@ -31,11 +31,11 @@ async function ensureBucket(storage) {
     await storage.createBucket(
       bucketId,
       "videos_bucket",
-      [Permission.read(Role.users()), Permission.create(Role.users())],
+      [Permission.read(Role.users()), Permission.create(Role.users()), Permission.update(Role.users()), Permission.delete(Role.users())],
       false,
       true,
       5368709120,
-      ["mp4", "webm", "mov", "m3u8", "ts", "jpg", "jpeg", "png", "vtt"],
+      ["mp4", "webm", "mov", "mkv", "avi", "flv", "ogv", "3gp", "m4v", "m3u8", "ts", "jpg", "jpeg", "png", "vtt"],
     );
     console.log(`Created bucket ${bucketId}`);
   }

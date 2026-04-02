@@ -1,6 +1,6 @@
 "use client";
 
-import { ID, Permission, Role } from "appwrite";
+import { ID } from "appwrite";
 import { Loader2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -29,9 +29,15 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  const getAllowedExtensions = () => [".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".ogv", ".3gp", ".m4v"];
+
   const validate = (videoFile: File) => {
-    if (!ALLOWED_VIDEO_TYPES.includes(videoFile.type)) {
-      return "Unsupported format. Use MP4, WebM, or MOV.";
+    const mimeTypeValid = ALLOWED_VIDEO_TYPES.includes(videoFile.type);
+    const fileName = videoFile.name.toLowerCase();
+    const extensionValid = getAllowedExtensions().some((ext) => fileName.endsWith(ext));
+
+    if (!mimeTypeValid && !extensionValid) {
+      return "Unsupported format. Supported: MP4, MKV, WebM, MOV, AVI, FLV, OGV, 3GP, M4V.";
     }
 
     if (videoFile.size > MAX_VIDEO_SIZE_BYTES) {
@@ -96,17 +102,11 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
     const duration = await getDuration(file);
 
     try {
-      const permissions = [
-        Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
-        Permission.delete(Role.user(userId)),
-      ];
-
       const uploadResult = await storage.createFile(
         bucketId,
         ID.unique(),
         file,
-        permissions,
+        [],
         // Appwrite web SDK supports progress callback in recent versions.
         (progressEvent: { progress: number }) => {
           setProgress(Math.round(progressEvent.progress));
@@ -120,7 +120,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
           bucketId,
           ID.unique(),
           subtitleFile,
-          permissions,
+          [],
         );
         subtitleFileId = subtitleUpload.$id;
       }
@@ -156,7 +156,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
       <CardHeader>
         <CardTitle className="text-2xl">Upload video</CardTitle>
         <CardDescription>
-          Drag and drop or select a file. Max size is 5GB. Supported: MP4, WebM, MOV.
+          Drag and drop or select a file. Max size is 5GB. Supported formats: MP4, MKV, WebM, MOV, AVI, FLV, OGV, 3GP, M4V.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -177,7 +177,7 @@ export function UploadDropzone({ bucketId, userId }: UploadDropzoneProps) {
         <input
           ref={inputRef}
           type="file"
-          accept="video/mp4,video/webm,video/quicktime"
+          accept="video/mp4,.mp4,video/webm,.webm,video/quicktime,.mov,video/x-matroska,.mkv,video/x-msvideo,.avi,video/x-flv,.flv,video/ogg,.ogv,video/3gpp,.3gp,video/x-m4v,.m4v"
           className="hidden"
           onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
         />
