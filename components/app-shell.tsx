@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useVideoStore } from "@/store/useVideoStore";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/client/api";
@@ -45,13 +46,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen text-slate-900">
-      <header className="sticky top-0 z-20 border-b border-stone-300/80 bg-stone-100/85 backdrop-blur-xl">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100">
+      <header className="sticky top-0 z-20 border-b border-stone-300/60 bg-stone-50/80 backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/80 transition-colors">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Link href="/dashboard" className="text-xl font-bold tracking-tight text-slate-900">
+          <Link href="/dashboard" className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             MyFlix Studio
           </Link>
-          <nav className="flex items-center gap-1 rounded-xl border border-stone-300 bg-white/75 p-1">
+          <nav className="flex items-center gap-1 rounded-xl border border-stone-300/60 bg-white/60 p-1 dark:border-slate-700/60 dark:bg-slate-800/60 backdrop-blur-sm transition-colors">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -59,19 +60,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-all",
                   pathname === item.href
-                    ? "bg-slate-900 text-white shadow-[0_8px_20px_-14px_rgba(15,23,42,0.9)]"
-                    : "text-slate-600 hover:bg-orange-100/70 hover:text-slate-900",
+                    ? "bg-slate-900 text-white shadow-lg dark:bg-orange-600 dark:text-white"
+                    : "text-slate-700 hover:bg-orange-100/50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-white",
                 )}
               >
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden rounded-full border border-stone-300 bg-white/75 px-3 py-1 text-xs text-slate-600 sm:inline">
+          <div className="flex items-center gap-2">
+            <span className="hidden rounded-full border border-stone-300/60 bg-white/60 px-3 py-1 text-xs text-slate-700 sm:inline dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300 backdrop-blur-sm transition-colors">
               {authLoading ? "Loading" : user?.email}
             </span>
-            <Button variant="outline" size="sm" onClick={logout}>
+            <ThemeToggle />
+            <Button variant="outline" size="sm" onClick={logout} className="border-stone-300/60 bg-white/60 text-slate-900 hover:bg-stone-200/50 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-100 dark:hover:bg-slate-700/70 transition-colors">
               Logout
             </Button>
           </div>

@@ -8,8 +8,14 @@ import { handleApiError, parsePositiveInt, requireEnv } from "@/lib/server/api";
 
 function getConfig() {
   return {
-    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
-    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    databaseId: requireEnv(
+      "APPWRITE_DATABASE_ID",
+      process.env.APPWRITE_DATABASE_ID,
+    ),
+    videosCollectionId: requireEnv(
+      "APPWRITE_VIDEOS_COLLECTION_ID",
+      process.env.APPWRITE_VIDEOS_COLLECTION_ID,
+    ),
     functionId: process.env.APPWRITE_VIDEO_FUNCTION_ID,
   };
 }
@@ -21,7 +27,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const page = parsePositiveInt(searchParams.get("page"), 1, 1, 10000);
-    const limit = parsePositiveInt(searchParams.get("limit"), PAGE_SIZE, 1, 100);
+    const limit = parsePositiveInt(
+      searchParams.get("limit"),
+      PAGE_SIZE,
+      1,
+      100,
+    );
     const search = searchParams.get("search")?.trim();
     const sort = searchParams.get("sort") === "asc" ? "asc" : "desc";
 
@@ -29,7 +40,9 @@ export async function GET(request: Request) {
       Query.equal("userId", user.$id),
       Query.limit(limit),
       Query.offset((page - 1) * limit),
-      sort === "asc" ? Query.orderAsc("createdAt") : Query.orderDesc("createdAt"),
+      sort === "asc"
+        ? Query.orderAsc("createdAt")
+        : Query.orderDesc("createdAt"),
     ];
 
     if (search) {
@@ -37,7 +50,11 @@ export async function GET(request: Request) {
     }
 
     const databases = getAdminDatabases();
-    const result = await databases.listDocuments(databaseId, videosCollectionId, queries);
+    const result = await databases.listDocuments(
+      databaseId,
+      videosCollectionId,
+      queries,
+    );
 
     return NextResponse.json({
       videos: result.documents,
@@ -64,7 +81,10 @@ export async function POST(request: Request) {
     };
 
     if (!body.title || !body.originalFileId || typeof body.size !== "number") {
-      return NextResponse.json({ error: "Invalid video metadata" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid video metadata" },
+        { status: 400 },
+      );
     }
 
     const databases = getAdminDatabases();
@@ -82,18 +102,25 @@ export async function POST(request: Request) {
         thumbnailUrl: "",
         duration: body.duration ?? 0,
         size: body.size,
-        createdAt: new Date().toISOString(),
       },
-      [Permission.read(Role.user(user.$id)), Permission.update(Role.user(user.$id)), Permission.delete(Role.user(user.$id))],
+      [
+        Permission.read(Role.user(user.$id)),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id)),
+      ],
     );
 
     if (functionId) {
       const functions = getAdminFunctions();
-      await functions.createExecution(functionId, JSON.stringify({
-        videoId: document.$id,
-        fileId: body.originalFileId,
-        userId: user.$id,
-      }), false);
+      await functions.createExecution(
+        functionId,
+        JSON.stringify({
+          videoId: document.$id,
+          fileId: body.originalFileId,
+          userId: user.$id,
+        }),
+        false,
+      );
     }
 
     return NextResponse.json({ video: document }, { status: 201 });

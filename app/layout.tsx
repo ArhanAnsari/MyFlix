@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AppWrapper } from "@/components/app-wrapper";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -28,8 +29,10 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="page-ambient min-h-full flex flex-col text-slate-900">
-        <div className="relative z-10 flex min-h-full flex-col">{children}</div>
+      <body className="page-ambient min-h-full flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
+        <AppWrapper>
+          <div className="relative z-10 flex min-h-full flex-col">{children}</div>
+        </AppWrapper>
       </body>
     </html>
   );
