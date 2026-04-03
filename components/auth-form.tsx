@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import { apiRequest } from "@/lib/client/api";
 
 type Mode = "login" | "signup";
@@ -49,7 +50,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <Card className="w-full max-w-md border-stone-300 bg-[linear-gradient(150deg,#fffdf8_0%,#f2e7d7_100%)]">
       <CardHeader>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">MyFlix Cloud</p>
+        <div className="mb-2">
+          <Logo href="/" size="sm" textClassName="text-orange-700" />
+        </div>
         <CardTitle className="text-2xl">{isSignup ? "Create your studio account" : "Welcome back"}</CardTitle>
         <CardDescription>
           {isSignup

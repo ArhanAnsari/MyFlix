@@ -1,8 +1,10 @@
 import ffmpegPath from "ffmpeg-static";
 import ffmpeg from "fluent-ffmpeg";
-import fs from "node:fs/promises";
-import path from "node:path";
-import os from "node:os";
+import * as fs from "fs/promises";
+import fsSync from "fs";
+import path from "path";
+import os from "os";
+
 import {
   Client,
   Databases,
@@ -10,7 +12,6 @@ import {
   ID,
   Permission,
   Role,
-  InputFile,
 } from "node-appwrite";
 
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -22,7 +23,17 @@ const databaseId = process.env.APPWRITE_DATABASE_ID;
 const videosCollectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID;
 const bucketId = process.env.APPWRITE_STORAGE_BUCKET_ID;
 
-const runFfmpeg = async (inputPath, hlsDir, thumbPath) => {
+const createTimeoutPromise = (ms) => {
+  return new Promise((_, reject) => 
+    setTimeout(() => reject(new Error(`FFmpeg operation timed out after ${ms}ms`)), ms)
+  );
+};
+
+const runFfmpeg = async (inputPath, hlsDir, thumbPath, fileSize) => {
+  // Calculate timeout based on file size (roughly 1 min per GB, min 10 min, max 60 min for 5GB)
+  const fileSizeGB = fileSize / (1024 * 1024 * 1024);
+  const timeoutMs = Math.max(600000, Math.min(3600000, fileSizeGB * 60000));
+  
   const hlsPromise = new Promise((resolve, reject) => {
     ffmpeg(inputPath)
       .outputOptions([
@@ -53,10 +64,33 @@ const runFfmpeg = async (inputPath, hlsDir, thumbPath) => {
       .run();
   });
 
-  await Promise.all([hlsPromise, thumbPromise]);
+  try {
+    await Promise.race([
+      Promise.all([hlsPromise, thumbPromise]),
+      createTimeoutPromise(timeoutMs)
+    ]);
+  } catch (err) {
+    throw new Error(`FFmpeg processing failed: ${err.message || String(err)}`);
+  }
+};
+
+const uploadFile = async (storage, bucketId, filePath, filename, userId, permissions) => {
+  return new Promise((resolve, reject) => {
+    const fileStream = fsSync.createReadStream(filePath);
+    
+    storage.createFile(
+      bucketId,
+      ID.unique(),
+      fileStream,
+      permissions
+    )
+      .then(resolve)
+      .catch(reject);
+  });
 };
 
 const handler = async ({ req, res, log, error }) => {
+  let workDir;
   try {
     if (!endpoint || !projectId || !apiKey || !databaseId || !videosCollectionId || !bucketId) {
       return res.json({ error: "Missing required function environment variables" }, 500);
@@ -73,17 +107,31 @@ const handler = async ({ req, res, log, error }) => {
     const storage = new Storage(client);
     const databases = new Databases(client);
 
-    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "myflix-"));
+    // Update status to "processing"
+    await databases.updateDocument(databaseId, videosCollectionId, videoId, {
+      processingStatus: "processing",
+    });
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB limit
+    workDir = await fs.mkdtemp(path.join(os.tmpdir(), "myflix-"));
     const inputPath = path.join(workDir, "input.mp4");
     const hlsDir = path.join(workDir, "hls");
     const thumbPath = path.join(workDir, "thumbnail.jpg");
 
     await fs.mkdir(hlsDir, { recursive: true });
 
+    log(`Downloading video ${videoId} from storage file ${fileId}`);
     const original = await storage.getFileDownload(bucketId, fileId);
-    await fs.writeFile(inputPath, Buffer.from(original));
+    const buffer = Buffer.from(original);
 
-    await runFfmpeg(inputPath, hlsDir, thumbPath);
+    if (buffer.length > MAX_FILE_SIZE) {
+      throw new Error(`File size exceeds 5GB limit (size: ${(buffer.length / (1024 * 1024 * 1024)).toFixed(2)}GB)`);
+    }
+
+    await fs.writeFile(inputPath, buffer);
+    log(`Downloaded ${(buffer.length / (1024 * 1024)).toFixed(2)}MB, starting ffmpeg processing`);
+
+    await runFfmpeg(inputPath, hlsDir, thumbPath, buffer.length);
 
     const permissions = [
       Permission.read(Role.user(userId)),
@@ -94,14 +142,22 @@ const handler = async ({ req, res, log, error }) => {
     const files = await fs.readdir(hlsDir);
     const segmentIdByName = new Map();
 
+    // Upload segments sequentially to avoid race conditions
     for (const filename of files.filter((file) => file.endsWith(".ts"))) {
-      const uploaded = await storage.createFile(
-        bucketId,
-        ID.unique(),
-        InputFile.fromPath(path.join(hlsDir, filename), filename),
-        permissions,
-      );
-      segmentIdByName.set(filename, uploaded.$id);
+      try {
+        const uploaded = await uploadFile(
+          storage,
+          bucketId,
+          path.join(hlsDir, filename),
+          filename,
+          userId,
+          permissions
+        );
+        segmentIdByName.set(filename, uploaded.$id);
+        log(`Uploaded segment ${filename}`);
+      } catch (err) {
+        log(`Warning: Failed to upload segment ${filename}: ${err.message}`);
+      }
     }
 
     const playlistPath = path.join(hlsDir, "master.m3u8");
@@ -118,18 +174,24 @@ const handler = async ({ req, res, log, error }) => {
 
     await fs.writeFile(playlistPath, playlistRewritten, "utf8");
 
-    const manifestFile = await storage.createFile(
+    // Upload manifest
+    const manifestFile = await uploadFile(
+      storage,
       bucketId,
-      ID.unique(),
-      InputFile.fromPath(playlistPath, "master.m3u8"),
-      permissions,
+      playlistPath,
+      "master.m3u8",
+      userId,
+      permissions
     );
 
-    const thumbnailFile = await storage.createFile(
+    // Upload thumbnail
+    const thumbnailFile = await uploadFile(
+      storage,
       bucketId,
-      ID.unique(),
-      InputFile.fromPath(thumbPath, "thumbnail.jpg"),
-      permissions,
+      thumbPath,
+      "thumbnail.jpg",
+      userId,
+      permissions
     );
 
     const thumbnailUrl = `${endpoint}/storage/buckets/${bucketId}/files/${thumbnailFile.$id}/view?project=${projectId}`;
@@ -137,13 +199,48 @@ const handler = async ({ req, res, log, error }) => {
     await databases.updateDocument(databaseId, videosCollectionId, videoId, {
       hlsFileId: manifestFile.$id,
       thumbnailUrl,
+      processingStatus: "completed",
     });
 
-    log(`Processed video ${videoId}`);
+    log(`Successfully processed video ${videoId}`);
     return res.json({ ok: true });
   } catch (err) {
-    error(err?.message || String(err));
-    return res.json({ error: err?.message || "Processing failed" }, 500);
+    const errorMsg = err?.message || String(err);
+    error(`Video processing failed for ${videoId}: ${errorMsg}`);
+    
+    try {
+      // Mark video as failed
+      const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
+      const databases = new Databases(client);
+      await databases.updateDocument(
+        databaseId,
+        videosCollectionId,
+        videoId,
+        { processingStatus: "failed" }
+      );
+    } catch (updateErr) {
+      error(`Failed to update video status to failed: ${updateErr?.message || String(updateErr)}`);
+    }
+    
+    // Clean up temporary directory
+    if (workDir) {
+      try {
+        await fs.rm(workDir, { recursive: true, force: true });
+      } catch (cleanupErr) {
+        error(`Failed to cleanup directory: ${cleanupErr?.message || String(cleanupErr)}`);
+      }
+    }
+    
+    return res.json({ error: errorMsg }, 500);
+  } finally {
+    // Ensure cleanup happens
+    if (workDir) {
+      try {
+        await fs.rm(workDir, { recursive: true, force: true });
+      } catch (cleanupErr) {
+        console.error(`Final cleanup failed: ${cleanupErr?.message}`);
+      }
+    }
   }
 };
 

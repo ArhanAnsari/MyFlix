@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { getAdminDatabases, getAdminStorage } from "@/lib/appwrite";
-import { handleApiError, jsonForbidden, requireEnv } from "@/lib/server/api";
-import { extractFileIdFromUrl } from "@/lib/video-files";
+import {
+  createApiLogContext,
+  handleApiErrorWithContext,
+  jsonForbidden,
+  logApiStart,
+  logApiSuccess,
+  requireEnv,
+} from "@/lib/server/api";
 
 function getConfig() {
   return {
@@ -26,52 +32,55 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const ctx = createApiLogContext("videos/download");
   try {
     const { databaseId, videosCollectionId, bucketId } = getConfig();
     const user = await requireUser();
     const { id } = await context.params;
-
+    logApiStart(ctx, `userId=${user.$id} videoId=${id}`);
     const databases = getAdminDatabases();
     const storage = getAdminStorage();
 
+    // Get video document
     const video = await databases.getDocument(
       databaseId,
       videosCollectionId,
       id,
     );
+
+    // Verify ownership
     if (video.userId !== user.$id) {
       return jsonForbidden();
     }
 
-    if (!video.thumbnailUrl || typeof video.thumbnailUrl !== "string") {
+    if (!video.originalFileId) {
       return NextResponse.json(
-        { error: "Thumbnail not found" },
+        { error: "Original file not found" },
         { status: 404 },
       );
     }
 
-    const thumbnailFileId = extractFileIdFromUrl(video.thumbnailUrl);
-    if (!thumbnailFileId) {
-      return NextResponse.json(
-        { error: "Thumbnail not found" },
-        { status: 404 },
-      );
-    }
-
-    const fileInfo = await storage.getFile(bucketId, thumbnailFileId);
-    const thumbnailData = await storage.getFileDownload(
+    // Get the file download
+    const fileData = await storage.getFileDownload(
       bucketId,
-      thumbnailFileId,
+      video.originalFileId,
+    );
+    const fileBuffer = Buffer.from(fileData);
+
+    logApiSuccess(
+      ctx,
+      `userId=${user.$id} videoId=${id} bytes=${fileBuffer.length}`,
     );
 
-    return new NextResponse(thumbnailData as BodyInit, {
-      status: 200,
+    // Return file as download
+    return new NextResponse(fileBuffer, {
       headers: {
-        "Content-Type": fileInfo.mimeType || "image/jpeg",
-        "Cache-Control": "private, max-age=120",
+        "Content-Type": "video/mp4",
+        "Content-Disposition": `attachment; filename="${video.title || "video"}.mp4"`,
+        "Content-Length": fileBuffer.length.toString(),
       },
     });
   } catch (error) {
-    return handleApiError(error, "Unable to stream thumbnail");
+    return handleApiErrorWithContext(error, "Failed to download video", ctx);
   }
 }

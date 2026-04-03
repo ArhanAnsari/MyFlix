@@ -13,6 +13,15 @@ export type VideoDocument = {
   processingStatus?: "pending" | "processing" | "completed" | "failed";
 };
 
+export type ShareDocument = {
+  $id: string;
+  videoId: string;
+  userId: string;
+  token: string;
+  expiresAt: string;
+  createdAt?: string;
+};
+
 export type WatchHistoryDocument = {
   $id: string;
   userId: string;

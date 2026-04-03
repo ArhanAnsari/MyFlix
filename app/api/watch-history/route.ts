@@ -7,8 +7,14 @@ import { handleApiError, requireEnv } from "@/lib/server/api";
 
 function getConfig() {
   return {
-    databaseId: requireEnv("APPWRITE_DATABASE_ID", process.env.APPWRITE_DATABASE_ID),
-    videosCollectionId: requireEnv("APPWRITE_VIDEOS_COLLECTION_ID", process.env.APPWRITE_VIDEOS_COLLECTION_ID),
+    databaseId: requireEnv(
+      "APPWRITE_DATABASE_ID",
+      process.env.APPWRITE_DATABASE_ID,
+    ),
+    videosCollectionId: requireEnv(
+      "APPWRITE_VIDEOS_COLLECTION_ID",
+      process.env.APPWRITE_VIDEOS_COLLECTION_ID,
+    ),
     historyCollectionId: requireEnv(
       "APPWRITE_WATCH_HISTORY_COLLECTION_ID",
       process.env.APPWRITE_WATCH_HISTORY_COLLECTION_ID,
@@ -22,11 +28,15 @@ export async function GET() {
     const user = await requireUser();
     const databases = getAdminDatabases();
 
-    const history = await databases.listDocuments(databaseId, historyCollectionId, [
-      Query.equal("userId", user.$id),
-      Query.orderDesc("updatedAt"),
-      Query.limit(8),
-    ]);
+    const history = await databases.listDocuments(
+      databaseId,
+      historyCollectionId,
+      [
+        Query.equal("userId", user.$id),
+        Query.orderDesc("$updatedAt"),
+        Query.limit(8),
+      ],
+    );
 
     if (history.documents.length === 0) {
       return NextResponse.json({ items: [] });
@@ -44,13 +54,19 @@ export async function GET() {
       return NextResponse.json({ items: [] });
     }
 
-    const videos = await databases.listDocuments(databaseId, videosCollectionId, [
-      Query.equal("userId", user.$id),
-      Query.equal("$id", videoIds),
-      Query.limit(videoIds.length),
-    ]);
+    const videos = await databases.listDocuments(
+      databaseId,
+      videosCollectionId,
+      [
+        Query.equal("userId", user.$id),
+        Query.equal("$id", videoIds),
+        Query.limit(videoIds.length),
+      ],
+    );
 
-    const videoById = new Map(videos.documents.map((video) => [video.$id, video]));
+    const videoById = new Map(
+      videos.documents.map((video) => [video.$id, video]),
+    );
 
     const items = history.documents
       .map((entry) => {
@@ -60,7 +76,7 @@ export async function GET() {
         return {
           video,
           progress: entry.progress ?? 0,
-          updatedAt: entry.updatedAt ?? null,
+          updatedAt: entry.$updatedAt ?? null,
         };
       })
       .filter(Boolean);

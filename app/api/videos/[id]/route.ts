@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
+import { Query } from "node-appwrite";
 
 import { requireUser } from "@/lib/auth";
-import {
-  getAdminDatabases,
-  getAdminStorage,
-  getAdminFunctions,
-} from "@/lib/appwrite";
+import { getAdminDatabases, getAdminStorage } from "@/lib/appwrite";
 import { handleApiError, jsonForbidden, requireEnv } from "@/lib/server/api";
 import {
   extractFileIdFromUrl,
@@ -49,6 +46,16 @@ export async function GET(
       id,
     );
     if (video.userId !== user.$id) return jsonForbidden();
+
+    if (video.originalFileId && video.processingStatus !== "completed") {
+      const healed = await databases.updateDocument(
+        databaseId,
+        videosCollectionId,
+        id,
+        { processingStatus: "completed" },
+      );
+      return NextResponse.json({ video: healed });
+    }
 
     return NextResponse.json({ video });
   } catch (error) {
@@ -106,12 +113,20 @@ export async function DELETE(
     await Promise.allSettled(
       fileIds.map((fileId) => storage.deleteFile(bucketId, fileId)),
     );
+    const historyDocs = await databases.listDocuments(
+      databaseId,
+      watchHistoryCollectionId,
+      [
+        Query.equal("userId", user.$id),
+        Query.equal("videoId", id),
+        Query.limit(100),
+      ],
+    );
+
     await Promise.allSettled([
       databases.deleteDocument(databaseId, videosCollectionId, id),
-      databases.deleteDocument(
-        databaseId,
-        watchHistoryCollectionId,
-        `${user.$id}_${id}`,
+      ...historyDocs.documents.map((doc) =>
+        databases.deleteDocument(databaseId, watchHistoryCollectionId, doc.$id),
       ),
     ]);
 
@@ -187,41 +202,6 @@ export async function PATCH(
       );
 
       return NextResponse.json({ video: updated }, { status: 200 });
-    }
-
-    // Retry processing
-    if (body.action === "retry-processing") {
-      const functionId = process.env.APPWRITE_VIDEO_FUNCTION_ID;
-      if (!functionId) {
-        return NextResponse.json(
-          { error: "Processing not available" },
-          { status: 503 },
-        );
-      }
-
-      // Update status to processing
-      await databases.updateDocument(databaseId, videosCollectionId, id, {
-        processingStatus: "processing",
-      });
-
-      // Trigger function
-      try {
-        const functions = getAdminFunctions();
-        await functions.createExecution(
-          functionId,
-          JSON.stringify({
-            videoId: id,
-            fileId: video.originalFileId,
-            userId: user.$id,
-          }),
-          false,
-        );
-      } catch (err) {
-        // Log error but return success as function was triggered
-        console.error("Failed to trigger processing:", err);
-      }
-
-      return NextResponse.json({ ok: true }, { status: 200 });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

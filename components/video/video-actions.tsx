@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Clock, Download, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,9 @@ export function VideoActions({ video, onVideoUpdate }: VideoActionsProps) {
   const [editingTitle, setEditingTitle] = useState(video.title);
   const [editingDescription, setEditingDescription] = useState(video.description);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
 
   const handleSaveTitle = async () => {
     if (!editingTitle.trim()) return;
@@ -55,22 +57,44 @@ export function VideoActions({ video, onVideoUpdate }: VideoActionsProps) {
     }
   };
 
-  const handleRetryProcessing = async () => {
-    const confirmed = window.confirm("Retry video processing?");
-    if (!confirmed) return;
-
-    setIsRetrying(true);
+  const handleDownload = async () => {
+    setIsDownloading(true);
     try {
-      await apiRequest(`/api/videos/${video.$id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ action: "retry-processing" }),
-      });
-      // Refresh the page or update the video state
-      window.location.reload();
+      const response = await fetch(`/api/videos/${video.$id}/download`);
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${video.title || "video"}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error("Failed to retry processing:", error);
+      console.error("Failed to download video:", error);
+      alert("Failed to download video");
     } finally {
-      setIsRetrying(false);
+      setIsDownloading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setIsSharing(true);
+    try {
+      const data = await apiRequest<{ shareUrl: string }>(`/api/videos/${video.$id}/share`, {
+        method: "POST",
+      });
+      setShareLink(data.shareUrl);
+      // Copy to clipboard
+      await navigator.clipboard.writeText(data.shareUrl);
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => setShareLink(null), 3000);
+    } catch (error) {
+      console.error("Failed to generate share link:", error);
+      alert("Failed to generate share link");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -110,25 +134,55 @@ export function VideoActions({ video, onVideoUpdate }: VideoActionsProps) {
           <label className="text-sm font-medium text-slate-100 dark:text-slate-400">Processing Status</label>
           <div className="flex items-center justify-between rounded-lg border border-stone-300/50 bg-stone-50/50 p-3 dark:border-slate-600/50 dark:bg-slate-700/30">
             {getStatusDisplay()}
-            {["pending", "processing", "failed"].includes(video.processingStatus || "pending") && (
-              <Button
-                onClick={handleRetryProcessing}
-                disabled={isRetrying}
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500"
-              >
-                {isRetrying ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Retrying...
-                  </>
-                ) : (
-                  "Retry Processing"
-                )}
-              </Button>
-            )}
+            <span className="text-xs text-slate-700 dark:text-slate-300">Direct streaming mode</span>
           </div>
         </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex-1 gap-2"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download Original
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleShare}
+            disabled={isSharing || video.processingStatus !== "completed"}
+            variant="outline"
+            className="flex-1 gap-2"
+          >
+            {isSharing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating Link...
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4" />
+                Create Share Link
+              </>
+            )}
+          </Button>
+        </div>
+
+        {shareLink && (
+          <div className="rounded-lg border border-green-300/50 bg-green-50/50 p-3 dark:border-green-600/50 dark:bg-green-700/30">
+            <p className="text-xs text-green-700 dark:text-green-300 mb-2">✓ Link copied to clipboard!</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 break-all">{shareLink}</p>
+          </div>
+        )}
 
         {/* Title */}
         <div className="space-y-2">

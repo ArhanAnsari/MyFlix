@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useVideoStore } from "@/store/useVideoStore";
 import { cn } from "@/lib/utils";
@@ -49,9 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
       <header className="sticky top-0 z-20 border-b border-stone-300/60 bg-stone-50/80 backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/80 transition-colors">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Link href="/dashboard" className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-            MyFlix Studio
-          </Link>
+          <Logo href="/dashboard" size="md" textClassName="text-slate-900 dark:text-white" />
           <nav className="flex items-center gap-1 rounded-xl border border-stone-300/60 bg-white/60 p-1 dark:border-slate-700/60 dark:bg-slate-800/60 backdrop-blur-sm transition-colors">
             {navItems.map((item) => (
               <Link

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getCurrentUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -17,7 +18,7 @@ export default async function Home() {
       {/* Navigation */}
       <nav className="border-b border-line/30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-accent">MyFlix</div>
+          <Logo href="/" size="md" textClassName="text-accent" />
           <div className="flex gap-3">
             <Link href="/login">
               <Button variant="outline" size="default">

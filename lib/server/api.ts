@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 
+export type ApiLogContext = {
+  route: string;
+  requestId: string;
+  startedAt: number;
+};
+
 export class HttpError extends Error {
   status: number;
 
@@ -17,10 +23,35 @@ export function requireEnv(name: string, value: string | undefined) {
   return value;
 }
 
-export function parsePositiveInt(value: string | null, fallback: number, min = 1, max = 100) {
+export function parsePositiveInt(
+  value: string | null,
+  fallback: number,
+  min = 1,
+  max = 100,
+) {
   const num = Number(value ?? fallback);
   if (!Number.isFinite(num)) return fallback;
   return Math.max(min, Math.min(max, Math.floor(num)));
+}
+
+export function createApiLogContext(route: string): ApiLogContext {
+  return {
+    route,
+    requestId: crypto.randomUUID(),
+    startedAt: Date.now(),
+  };
+}
+
+export function logApiStart(ctx: ApiLogContext, details?: string) {
+  console.info(
+    `[api][${ctx.route}][${ctx.requestId}] start${details ? ` ${details}` : ""}`,
+  );
+}
+
+export function logApiSuccess(ctx: ApiLogContext, details?: string) {
+  console.info(
+    `[api][${ctx.route}][${ctx.requestId}] success durationMs=${Date.now() - ctx.startedAt}${details ? ` ${details}` : ""}`,
+  );
 }
 
 function mapError(error: unknown, fallbackMessage: string) {
@@ -51,6 +82,23 @@ function mapError(error: unknown, fallbackMessage: string) {
 
 export function handleApiError(error: unknown, fallbackMessage: string) {
   const { status, message } = mapError(error, fallbackMessage);
+  console.error(
+    `[api][unscoped] error status=${status} message=${message}`,
+    error,
+  );
+  return NextResponse.json({ error: message }, { status });
+}
+
+export function handleApiErrorWithContext(
+  error: unknown,
+  fallbackMessage: string,
+  ctx: ApiLogContext,
+) {
+  const { status, message } = mapError(error, fallbackMessage);
+  console.error(
+    `[api][${ctx.route}][${ctx.requestId}] error status=${status} durationMs=${Date.now() - ctx.startedAt} message=${message}`,
+    error,
+  );
   return NextResponse.json({ error: message }, { status });
 }
 

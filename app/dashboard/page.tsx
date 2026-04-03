@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { VideoCard } from "@/components/video/video-card";
 import { PAGE_SIZE } from "@/lib/constants";
 import { apiRequest } from "@/lib/client/api";
+import { formatDuration } from "@/lib/utils";
 import type { VideoDocument } from "@/lib/types";
 
 type ContinueWatchingItem = {
@@ -18,6 +19,21 @@ type ContinueWatchingItem = {
   progress: number;
   updatedAt: string | null;
 };
+
+function formatRelativeTime(dateIso: string | null) {
+  if (!dateIso) return "Recently watched";
+  const date = new Date(dateIso);
+  const diffMs = Date.now() - date.getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return "Recently watched";
+
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? "s" : ""} ago`;
+}
 
 export default function DashboardPage() {
   const [videos, setVideos] = useState<VideoDocument[]>([]);
@@ -29,6 +45,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
+
+  const loadContinueWatching = async () => {
+    try {
+      const data = await apiRequest<{ items: ContinueWatchingItem[] }>(
+        "/api/watch-history",
+        {
+          cache: "no-store",
+          onUnauthorized: () => window.location.assign("/login"),
+        },
+      );
+      setContinueWatching(data.items ?? []);
+    } catch {
+      setContinueWatching([]);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,19 +95,27 @@ export default function DashboardPage() {
   }, [page, search, sort]);
 
   useEffect(() => {
-    const loadContinueWatching = async () => {
-      try {
-        const data = await apiRequest<{ items: ContinueWatchingItem[] }>("/api/watch-history", {
-          cache: "no-store",
-          onUnauthorized: () => window.location.assign("/login"),
-        });
-        setContinueWatching(data.items ?? []);
-      } catch {
-        setContinueWatching([]);
+    void loadContinueWatching();
+  }, []);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void loadContinueWatching();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void loadContinueWatching();
       }
     };
 
-    void loadContinueWatching();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   return (
@@ -84,11 +123,16 @@ export default function DashboardPage() {
       <section className="space-y-5">
         {continueWatching.length > 0 ? (
           <div className="space-y-3 rounded-2xl border border-stone-300 bg-white/80 p-4 shadow-[0_24px_40px_-36px_rgba(15,23,42,0.8)]">
-            <h2 className="text-base font-semibold text-slate-900">Continue Watching</h2>
+            <h2 className="text-base font-semibold text-slate-900">Watch History</h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {continueWatching.map((item) => {
                 const duration = item.video.duration > 0 ? item.video.duration : 1;
                 const progressPercent = Math.max(0, Math.min(100, Math.round((item.progress / duration) * 100)));
+                const resumeAt = formatDuration(Math.max(0, item.progress));
+                const total = formatDuration(Math.max(0, item.video.duration));
+                const thumbnailSrc = item.video.thumbnailUrl
+                  ? `/api/videos/${item.video.$id}/thumbnail`
+                  : null;
 
                 return (
                   <Link
@@ -96,9 +140,21 @@ export default function DashboardPage() {
                     href={`/video/${item.video.$id}`}
                     className="rounded-xl border border-stone-300 bg-stone-50/90 p-3 transition hover:-translate-y-0.5 hover:border-orange-500/50"
                   >
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="line-clamp-1 text-sm font-medium text-slate-900">{item.video.title}</p>
-                      <span className="text-xs text-slate-500">{progressPercent}%</span>
+                    <div className="mb-3 flex gap-3">
+                      <div className="h-16 w-28 shrink-0 overflow-hidden rounded-md border border-stone-300 bg-stone-200">
+                        {thumbnailSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={thumbnailSrc} alt={item.video.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[11px] text-slate-500">No thumbnail</div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-medium text-slate-900">{item.video.title}</p>
+                        <p className="mt-1 text-xs text-slate-600">Resume at {resumeAt} / {total}</p>
+                        <p className="mt-1 text-xs text-slate-500">{formatRelativeTime(item.updatedAt)}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-slate-500">{progressPercent}%</span>
                     </div>
                     <Progress value={progressPercent} />
                   </Link>

@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [totalBytes, setTotalBytes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [backfillingThumbs, setBackfillingThumbs] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -49,6 +51,28 @@ export default function SettingsPage() {
     }
   };
 
+  const backfillThumbnails = async () => {
+    setBackfillResult(null);
+    setBackfillingThumbs(true);
+    try {
+      const data = await apiRequest<{ updated: number; total: number; unchanged: number }>(
+        "/api/settings/backfill-thumbnails",
+        {
+          method: "POST",
+          onUnauthorized: () => router.replace("/login"),
+        },
+      );
+
+      setBackfillResult(
+        `Backfill complete. Updated ${data.updated} of ${data.total} videos (${data.unchanged} already had thumbnails).`,
+      );
+    } catch {
+      setBackfillResult("Thumbnail backfill failed. Please try again.");
+    } finally {
+      setBackfillingThumbs(false);
+    }
+  };
+
   return (
     <AppShell>
       <section className="mx-auto grid w-full max-w-3xl gap-4">
@@ -66,6 +90,19 @@ export default function SettingsPage() {
                 <p>Total storage used: {formatBytes(totalBytes)}</p>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-stone-300 bg-stone-50/70">
+          <CardHeader>
+            <CardTitle>Maintenance</CardTitle>
+            <CardDescription>Run one-time maintenance utilities for your library.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button onClick={backfillThumbnails} disabled={backfillingThumbs}>
+              {backfillingThumbs ? "Generating thumbnails..." : "Backfill missing thumbnails"}
+            </Button>
+            {backfillResult ? <p className="text-sm text-slate-700">{backfillResult}</p> : null}
           </CardContent>
         </Card>
 

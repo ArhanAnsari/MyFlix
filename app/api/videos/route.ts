@@ -2,12 +2,32 @@ import { ID, Permission, Query, Role } from "node-appwrite";
 import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
-import { getAdminDatabases, getAdminFunctions } from "@/lib/appwrite";
+import { getAdminDatabases, getAdminStorage } from "@/lib/appwrite";
 import { PAGE_SIZE } from "@/lib/constants";
-import { handleApiError, parsePositiveInt, requireEnv } from "@/lib/server/api";
+import {
+  buildThumbnailUrl,
+  generateSvgThumbnail,
+  uploadSvgThumbnail,
+} from "@/lib/server/thumbnail";
+import {
+  createApiLogContext,
+  handleApiErrorWithContext,
+  logApiStart,
+  logApiSuccess,
+  parsePositiveInt,
+  requireEnv,
+} from "@/lib/server/api";
 
 function getConfig() {
   return {
+    endpoint: requireEnv(
+      "NEXT_PUBLIC_APPWRITE_ENDPOINT",
+      process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
+    ),
+    projectId: requireEnv(
+      "NEXT_PUBLIC_APPWRITE_PROJECT_ID",
+      process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID,
+    ),
     databaseId: requireEnv(
       "APPWRITE_DATABASE_ID",
       process.env.APPWRITE_DATABASE_ID,
@@ -16,15 +36,21 @@ function getConfig() {
       "APPWRITE_VIDEOS_COLLECTION_ID",
       process.env.APPWRITE_VIDEOS_COLLECTION_ID,
     ),
-    functionId: process.env.APPWRITE_VIDEO_FUNCTION_ID,
+    bucketId: requireEnv(
+      "APPWRITE_STORAGE_BUCKET_ID",
+      process.env.APPWRITE_STORAGE_BUCKET_ID,
+    ),
   };
 }
 
 export async function GET(request: Request) {
+  const ctx = createApiLogContext("videos/list");
   try {
-    const { databaseId, videosCollectionId } = getConfig();
+    const { endpoint, projectId, databaseId, videosCollectionId, bucketId } =
+      getConfig();
     const user = await requireUser();
     const { searchParams } = new URL(request.url);
+    logApiStart(ctx, `userId=${user.$id}`);
 
     const page = parsePositiveInt(searchParams.get("page"), 1, 1, 10000);
     const limit = parsePositiveInt(
@@ -50,10 +76,78 @@ export async function GET(request: Request) {
     }
 
     const databases = getAdminDatabases();
+    const storage = getAdminStorage();
     const result = await databases.listDocuments(
       databaseId,
       videosCollectionId,
       queries,
+    );
+
+    // Self-heal legacy statuses now that direct streaming is immediate.
+    const docsNeedingUpdate = result.documents.filter(
+      (doc) =>
+        doc.originalFileId &&
+        doc.processingStatus &&
+        doc.processingStatus !== "completed",
+    );
+
+    if (docsNeedingUpdate.length > 0) {
+      await Promise.allSettled(
+        docsNeedingUpdate.map((doc) =>
+          databases.updateDocument(databaseId, videosCollectionId, doc.$id, {
+            processingStatus: "completed",
+          }),
+        ),
+      );
+      for (const doc of docsNeedingUpdate) {
+        doc.processingStatus = "completed";
+      }
+    }
+
+    const missingThumbDocs = result.documents.filter(
+      (doc) => !doc.thumbnailUrl || String(doc.thumbnailUrl).trim() === "",
+    );
+    let thumbsFailed = 0;
+
+    if (missingThumbDocs.length > 0) {
+      for (const doc of missingThumbDocs) {
+        try {
+          const svg = generateSvgThumbnail(doc.title || "Video");
+          const thumbnailFileId = await uploadSvgThumbnail(
+            storage,
+            bucketId,
+            doc.userId,
+            svg,
+          );
+          const thumbnailUrl = buildThumbnailUrl(
+            endpoint,
+            bucketId,
+            thumbnailFileId,
+            projectId,
+          );
+
+          await databases.updateDocument(
+            databaseId,
+            videosCollectionId,
+            doc.$id,
+            {
+              thumbnailUrl,
+            },
+          );
+          doc.thumbnailUrl = thumbnailUrl;
+        } catch (err) {
+          thumbsFailed += 1;
+          console.error(
+            `[api][videos/list][${ctx.requestId}] thumbnail-fill-failed videoId=${doc.$id}`,
+            err,
+          );
+        }
+      }
+    }
+
+    logApiSuccess(
+      ctx,
+      `userId=${user.$id} returned=${result.documents.length} healed=${docsNeedingUpdate.length} thumbsAttempted=${missingThumbDocs.length} thumbsFailed=${thumbsFailed}`,
     );
 
     return NextResponse.json({
@@ -63,14 +157,17 @@ export async function GET(request: Request) {
       limit,
     });
   } catch (error) {
-    return handleApiError(error, "Failed to fetch videos");
+    return handleApiErrorWithContext(error, "Failed to fetch videos", ctx);
   }
 }
 
 export async function POST(request: Request) {
+  const ctx = createApiLogContext("videos/create");
   try {
-    const { databaseId, videosCollectionId, functionId } = getConfig();
+    const { endpoint, projectId, databaseId, videosCollectionId, bucketId } =
+      getConfig();
     const user = await requireUser();
+    logApiStart(ctx, `userId=${user.$id}`);
     const body = (await request.json()) as {
       title?: string;
       description?: string;
@@ -88,6 +185,7 @@ export async function POST(request: Request) {
     }
 
     const databases = getAdminDatabases();
+    const storage = getAdminStorage();
     const document = await databases.createDocument(
       databaseId,
       videosCollectionId,
@@ -102,7 +200,7 @@ export async function POST(request: Request) {
         thumbnailUrl: "",
         duration: body.duration ?? 0,
         size: body.size,
-        processingStatus: functionId ? "processing" : "completed",
+        processingStatus: "completed",
       },
       [
         Permission.read(Role.user(user.$id)),
@@ -111,21 +209,46 @@ export async function POST(request: Request) {
       ],
     );
 
-    if (functionId) {
-      const functions = getAdminFunctions();
-      await functions.createExecution(
-        functionId,
-        JSON.stringify({
-          videoId: document.$id,
-          fileId: body.originalFileId,
-          userId: user.$id,
-        }),
-        false,
+    try {
+      const svg = generateSvgThumbnail(body.title);
+      const thumbnailFileId = await uploadSvgThumbnail(
+        storage,
+        bucketId,
+        user.$id,
+        svg,
+      );
+      const thumbnailUrl = buildThumbnailUrl(
+        endpoint,
+        bucketId,
+        thumbnailFileId,
+        projectId,
+      );
+
+      document.thumbnailUrl = thumbnailUrl;
+
+      await databases.updateDocument(
+        databaseId,
+        videosCollectionId,
+        document.$id,
+        {
+          thumbnailUrl,
+        },
+      );
+    } catch (thumbnailErr) {
+      console.warn(
+        `[api][videos/create][${ctx.requestId}] thumbnail-generation-failed`,
+        thumbnailErr,
       );
     }
 
+    logApiSuccess(ctx, `userId=${user.$id} videoId=${document.$id}`);
+
     return NextResponse.json({ video: document }, { status: 201 });
   } catch (error) {
-    return handleApiError(error, "Failed to create video record");
+    return handleApiErrorWithContext(
+      error,
+      "Failed to create video record",
+      ctx,
+    );
   }
 }

@@ -35,10 +35,10 @@ export default function VideoPage() {
     void load();
   }, [params.id, router]);
 
-  const manifestUrl = useMemo(() => {
-    if (!video?.hlsFileId) return "";
-    return `/api/stream/${video.$id}/manifest`;
-  }, [video?.hlsFileId, video?.$id]);
+  const streamUrl = useMemo(() => {
+    if (!video) return "";
+    return `/api/stream/${video.$id}`;
+  }, [video]);
 
   const subtitleUrl = useMemo(() => {
     if (!video?.subtitleFileId) return "";
@@ -81,13 +81,7 @@ export default function VideoPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <Card className="border-stone-300/60 dark:border-slate-700/60 bg-linear-to-br from-stone-50/95 to-stone-100/95 dark:from-slate-800/80 dark:to-slate-900/80">
           <CardContent className="space-y-4 p-4 sm:p-6">
-            {manifestUrl ? (
-              <VideoPlayer videoId={video.$id} manifestUrl={manifestUrl} subtitleUrl={subtitleUrl} />
-            ) : (
-              <div className="flex items-center justify-center rounded-lg bg-slate-200/50 p-8 dark:bg-slate-700/30">
-                <p className="text-sm text-slate-600 dark:text-slate-400">Video processing in progress. Please wait...</p>
-              </div>
-            )}
+            <VideoPlayer videoId={video.$id} streamUrl={streamUrl} subtitleUrl={subtitleUrl} />
 
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight">{video.title}</h1>
